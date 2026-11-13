@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>印章提取 · 纸质章转电子章</title>
+<link rel="stylesheet" href="./styles.css?v=13">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <h1>印章提取</h1>
+    <p class="sub">上传盖章的纸面照片，自动增强对比度，抠出透明底的红色印章。</p>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="panel" aria-label="提取设置">
+    <input id="file" type="file" accept="image/*" hidden>
+    <button class="pick" id="pick" type="button">
+      <span class="pick-title">选择图片</span>
+      <span class="pick-hint">也可以拖进来，或按 ⌘V 粘贴</span>
+    </button>
+
+    <fieldset id="options" disabled>
+      <label class="switch">
+        <input id="enhance" type="checkbox" checked>
+        <span class="switch-ui" aria-hidden="true"></span>
+        <span class="switch-text">
+          <span>自动增强对比度</span>
+          <small>校正偏色，拉开红墨和纸面的差别</small>
+        </span>
+      </label>
+
+      <label class="field">提取灵敏度
+        <span class="range-row">
+          <input id="sensitivity" type="range" min="0" max="100" value="50" step="1">
+          <output id="sensitivityOut" for="sensitivity">50</output>
+        </span>
+        <small>章抠不全就调高，背景杂点多就调低</small>
+      </label>
+
+      <label class="field">印章颜色
+        <select id="color">
+          <option value="ff0000" selected>正红 · #FF0000</option>
+          <option value="da251d">官方暗红 · #DA251D</option>
+          <option value="ink">保留原墨色</option>
+        </select>
+      </label>
+
+      <div class="actions">
+        <button class="btn primary" id="downloadPng" type="button" disabled>下载透明 PNG</button>
+        <button class="btn" id="downloadWhite" type="button" disabled>下载白底 PNG</button>
+      </div>
+
+      <p class="status" id="status" role="status">还没有图片。</p>
+      <p class="status error" id="error" role="alert" hidden></p>
+    </fieldset>
+  </section>
+
+  <section class="workbench" aria-label="预览">
+    <div class="stage" id="stage" data-view="transparent">
+      <div class="drop" id="drop">
+        <div class="drop-mark" aria-hidden="true"></div>
+        <p class="drop-title">把盖章图片拖到这里</p>
+        <p class="drop-sub">JPG、PNG、WebP；图片只在浏览器本地处理</p>
+        <p class="drop-hint">白纸盖章后拍，光线均匀，不要拍实物印章</p>
+      </div>
+      <img id="preview" alt="提取出的印章预览" hidden>
+      <div class="views" id="views" hidden role="group" aria-label="预览背景">
+        <button type="button" data-view="transparent" aria-pressed="true">透明</button>
+        <button type="button" data-view="white" aria-pressed="false">白底</button>
+        <button type="button" data-view="original" aria-pressed="false">原图</button>
+      </div>
+      <div class="busy" id="busy" hidden>处理中…</div>
+    </div>
+    <p class="footnote">提取结果是一张图片，不是具备法律效力的电子签章。</p>
+  </section>
+</main>
+
+<section class="cases" id="cases" aria-labelledby="casesTitle">
+  <div class="cases-head">
+    <h2 id="casesTitle">提取案例</h2>
+    <p>四组真实输入与提取结果，默认设置：自动增强开、灵敏度 50、正红。左边是原图，右边是透明底输出。</p>
+  </div>
+  <div class="case-grid">
+    <figure>
+      <img src="./cases/01-phone-photo/compare.png" alt="左边是手机拍的纸面盖章照片，右边是提取出的透明底印章，章面文字已打码" loading="lazy">
+    </figure>
+    <figure>
+      <img src="./cases/02-contract-official/compare.png" alt="左边是白底合同专用章，右边是提取后的透明底结果" loading="lazy">
+    </figure>
+    <figure>
+      <img src="./cases/03-finance-official/compare.png" alt="左边是白底财务专用章，右边是提取后的透明底结果" loading="lazy">
+    </figure>
+    <figure>
+      <img src="./cases/04-oval-contract/compare.png" alt="左边是椭圆形的外资合同专用章，右边是提取后的透明底结果，保持椭圆比例" loading="lazy">
+    </figure>
+  </div>
+</section>
+
+<section class="guide" id="guide" aria-labelledby="guideTitle">
+  <div class="guide-head">
+    <h2 id="guideTitle">印模上传要求</h2>
+    <p>按电子营业执照小程序的印模流程整理，其他电子章系统也适用。</p>
+  </div>
+  <ol class="steps">
+    <li>
+      <span class="step-no">01</span>
+      <h3>拍摄</h3>
+      <p>先在白纸上盖章，再拍纸面。不要直接拍实物印章。光线均匀，不要过暗或有阴影，章面完整入镜。</p>
+    </li>
+    <li>
+      <span class="step-no">02</span>
+      <h3>提取</h3>
+      <p>沿章边裁紧，只保留红色形状，不留大片白边和其他线条。红白不分时调高灵敏度。</p>
+    </li>
+    <li>
+      <span class="step-no">03</span>
+      <h3>上传</h3>
+      <p>导出透明或白底 PNG，核对公司名、编码和类型。审核工作日约 30 分钟，不通过就改图重传。</p>
+    </li>
+  </ol>
+  <div class="examples">
+    <p class="examples-note">每组左边是错误示例，右边是正确示例。示例图来自电子营业执照小程序的印模上传说明。</p>
+    <div class="example-grid">
+      <figure>
+        <div class="pair">
+          <img src="./assets/guide/1-photo.jpg" alt="左：直接拍摄实物印章；右：白纸盖章后再拍" loading="lazy">
+          <span class="tag bad">错误</span>
+          <span class="tag good">正确</span>
+        </div>
+        <figcaption>
+          <strong>拍纸面，不拍实物印章</strong>
+          <span>先在白纸上盖章，再拍纸面。</span>
+        </figcaption>
+      </figure>
+      <figure>
+        <div class="pair">
+          <img src="./assets/guide/2-dark.jpg" alt="左：光线过暗；右：光线均匀，红白分明" loading="lazy">
+          <span class="tag bad">错误</span>
+          <span class="tag good">正确</span>
+        </div>
+        <figcaption>
+          <strong>光线要均匀</strong>
+          <span>不要过暗，不要有阴影，章面拍全。</span>
+        </figcaption>
+      </figure>
+      <figure>
+        <div class="pair">
+          <img src="./assets/guide/3-loose.jpg" alt="左：留白过多；右：沿章边裁紧" loading="lazy">
+          <span class="tag bad">错误</span>
+          <span class="tag good">正确</span>
+        </div>
+        <figcaption>
+          <strong>沿章边裁紧</strong>
+          <span>不要留大片白边，章体撑满画面。</span>
+        </figcaption>
+      </figure>
+      <figure>
+        <div class="pair">
+          <img src="./assets/guide/4-lines.jpg" alt="左：带入其他线条；右：只保留红色形状" loading="lazy">
+          <span class="tag bad">错误</span>
+          <span class="tag good">正确</span>
+        </div>
+        <figcaption>
+          <strong>只留红色形状</strong>
+          <span>去掉表格线、桌面、手指等杂线。</span>
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<script src="./extract.js?v=13"></script>
+<script src="./app.js?v=13"></script>
+</body>
+</html>

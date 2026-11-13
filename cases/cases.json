@@ -1,0 +1,50 @@
+[
+ {
+  "slug": "01-phone-photo",
+  "title": "手机拍的纸面章",
+  "note": "真实照片，原图提取后打码",
+  "input": "cases/01-phone-photo/input.jpg",
+  "output": "cases/01-phone-photo/output.png",
+  "compare": "cases/01-phone-photo/compare.png",
+  "size": [
+   406,
+   404
+  ]
+ },
+ {
+  "slug": "02-contract-official",
+  "title": "合同专用章",
+  "note": "DB4403 官方案例，圆章无星",
+  "input": "cases/02-contract-official/input.png",
+  "output": "cases/02-contract-official/output.png",
+  "compare": "cases/02-contract-official/compare.png",
+  "size": [
+   284,
+   284
+  ]
+ },
+ {
+  "slug": "03-finance-official",
+  "title": "财务专用章",
+  "note": "DB4403 官方案例，圆章无星",
+  "input": "cases/03-finance-official/input.png",
+  "output": "cases/03-finance-official/output.png",
+  "compare": "cases/03-finance-official/compare.png",
+  "size": [
+   284,
+   284
+  ]
+ },
+ {
+  "slug": "04-oval-contract",
+  "title": "外资合同专用章",
+  "note": "DB4403 官方案例，椭圆章",
+  "input": "cases/04-oval-contract/input.png",
+  "output": "cases/04-oval-contract/output.png",
+  "compare": "cases/04-oval-contract/compare.png",
+  "size": [
+   428,
+   286
+  ]
+ }
+]
