@@ -8,12 +8,27 @@
   ![零依赖](https://img.shields.io/badge/dependencies-0-2f6f44?style=flat-square)
   ![浏览器内运行](https://img.shields.io/badge/runs%20in-the%20browser-b42318?style=flat-square)
   ![不上传](https://img.shields.io/badge/network-none-6f6a5f?style=flat-square)
+  ![许可证](https://img.shields.io/badge/license-MIT-2f6f44?style=flat-square)
 
   [快速开始][quick-start] • [选项][options] • [怎么抠的][how] • [案例][cases] • [限制][limits]
 </div>
 
 > [!WARNING]
 > 章面含公司名和统一社会信用代码，属于敏感信息。导出的图别传公开图床，用之前确认你有权使用这枚章。处理全在浏览器里完成，不会上传任何图片。
+
+## 快速开始
+
+直接双击 `index.html` 就能用，不用构建，断网也能跑。也可以起一个本地静态服务：
+
+```bash
+git clone https://github.com/hey-yx/stamp-extractor.git
+cd stamp-extractor
+python3 -m http.server 8131
+```
+
+打开 <http://127.0.0.1:8131/>，拖入图片、点「选择图片」，或直接 ⌘V 粘贴。
+
+想一步看结果：载入 `cases/02-contract-official/input.png`，按钮下方的状态行会显示 `284×284 px`。
 
 ## 它能做什么
 
@@ -22,24 +37,13 @@
 - 导出透明底和白底两张 PNG，按章体实际像素裁紧，不补白、不放大。
 - 纯静态页面：没有依赖，不用构建，断网也能跑。
 
-## 快速开始
-
-```bash
-cd stamp-extractor
-python3 -m http.server 8131
-```
-
-打开 <http://127.0.0.1:8131/>，拖入图片、点「选择图片」，或直接 ⌘V 粘贴。直接双击 `index.html` 也能用。
-
-想一步看结果：载入 `cases/02-contract-official/input.png`，按钮下方的状态行会显示 `284×284 px`。
-
 ## 选项
 
 | 控件 | 默认 | 改的是什么 |
 | --- | --- | --- |
 | 自动增强对比度 | 开 | 先把偏黄偏灰的纸面校回白色；门槛再放宽 8%，淡墨能多留一些。 |
 | 提取灵敏度 | 50 | 调高留更多淡章，调低压掉背景杂点。 |
-| 印章颜色 | `#FF0000` | 官方暗红选 `#DA251D`，也可以保留照片里采到的原墨色。 |
+| 印章颜色 | `#FF0000` | 默认纯红，屏幕显示鲜亮。也可以换标准红 `#DA251D`（深圳市地方标准 DB4403/T 383.6-2023 第 5.3 条的印模色 RGB 218/37/29）。 |
 
 边缘只有「留着」和「全透明」两种，不做柔化，放大后弧线会有台阶。输出两种 PNG，透明底直接拖进 WPS，按实物直径设 4.2cm 或 4.0cm。
 
@@ -55,7 +59,7 @@ python3 -m http.server 8131
 
 ## 案例
 
-四组都是默认设置：自动增强开、灵敏度 50、正红。左边输入，右边透明底输出。
+四组都是默认设置：自动增强开、灵敏度 50、纯红。左边输入，右边透明底输出。
 
 <p align="center">
   <img src="cases/01-phone-photo/compare.png" alt="手机拍的纸面章，字号和编码已打码，右侧是提取结果" width="48%"><img src="cases/02-contract-official/compare.png" alt="合同专用章样张与提取结果" width="48%">
