@@ -20,8 +20,12 @@
     drop: $('drop'),
     preview: $('preview'),
     views: $('views'),
-    busy: $('busy')
+    busy: $('busy'),
+    sample: $('sample'),
+    caseGrid: $('caseGrid')
   };
+
+  const SAMPLE = { src: './cases/02-contract-official/input.png', name: '合同专用章示例.png' };
 
   const state = {
     fileName: '',
@@ -47,8 +51,17 @@
       return;
     }
     const s = state.result.stats;
-    els.status.textContent = s.width + '×' + s.height + ' px · 红色 ' +
-      (s.coverage * 100).toFixed(1) + '% · ' + s.ms + ' ms';
+    const parts = [
+      s.width + '×' + s.height + ' px',
+      '红色 ' + (s.coverage * 100).toFixed(1) + '%',
+      s.ms + ' ms'
+    ];
+    els.status.textContent = '';
+    parts.forEach(function (text) {
+      const span = document.createElement('span');
+      span.textContent = text;
+      els.status.appendChild(span);
+    });
   }
 
   function applyView() {
@@ -163,6 +176,25 @@
     img.src = url;
   }
 
+  function loadFromUrl(src, name) {
+    setError('');
+    setBusy(true);
+    fetch(src)
+      .then(function (r) {
+        if (!r.ok) throw new Error(String(r.status));
+        return r.blob();
+      })
+      .then(function (blob) {
+        const file = new File([blob], name || '示例.png', { type: blob.type || 'image/png' });
+        loadFile(file);
+        document.querySelector('.shell').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      })
+      .catch(function () {
+        setBusy(false);
+        setError('示例图加载失败，刷新页面再试。');
+      });
+  }
+
   function download(kind) {
     if (!state.result || !state.result.ok) return;
     const canvas = kind === 'white' ? state.result.whiteCanvas : state.result.canvas;
@@ -188,6 +220,16 @@
   els.file.addEventListener('change', function () {
     loadFile(els.file.files && els.file.files[0]);
     els.file.value = '';
+  });
+
+  els.sample.addEventListener('click', function (e) {
+    e.stopPropagation();
+    loadFromUrl(SAMPLE.src, SAMPLE.name);
+  });
+  els.caseGrid.addEventListener('click', function (e) {
+    const fig = e.target.closest('.case');
+    if (!fig) return;
+    loadFromUrl(fig.dataset.src, fig.dataset.name);
   });
 
   els.enhance.addEventListener('change', runSoon);
@@ -235,14 +277,6 @@
       }
     }
   });
-
-  // 便于自动验收
-  window.__stampApp = {
-    state: state,
-    loadFile: loadFile,
-    run: run,
-    els: els
-  };
 
   els.sensitivityOut.textContent = els.sensitivity.value;
 })();

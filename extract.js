@@ -118,7 +118,7 @@
 
   /* 选主色块：以最大连通块为种子，按包围盒邻近合并断弧和其他部件。
    * 章是细线条，黑字压断时常裂成几段；用 4% 边长的间距把同一枚章重新归组，
-   * 又能和画面里远处的红色文字、logo 分开。
+   * 又能和画面里远处的红色文字、logo 分开。返回要保留的块 id 集合。
    */
   function clusterBox(comps, w, h) {
     if (!comps.length) return null;
@@ -146,34 +146,7 @@
         }
       }
     }
-    return { keep: keep, box: box };
-  }
-
-  function inkColor(data, mask, score, minScore) {
-    const hist = [new Uint32Array(256), new Uint32Array(256), new Uint32Array(256)];
-    let n = 0;
-    for (let p = 0, i = 0; p < mask.length; p++, i += 4) {
-      if (!mask[p] || score[p] < minScore) continue;
-      hist[0][data[i]]++; hist[1][data[i + 1]]++; hist[2][data[i + 2]]++;
-      n++;
-    }
-    if (!n) return [255, 0, 0];
-    const pick = function (hh, p) {
-      const target = n * p;
-      let acc = 0;
-      for (let v = 0; v < 256; v++) { acc += hh[v]; if (acc >= target) return v; }
-      return 255;
-    };
-    // 取墨芯：红通道取 70 分位，绿蓝取 30 分位，避免边缘混纸的浅红
-    return [pick(hist[0], 0.7), pick(hist[1], 0.3), pick(hist[2], 0.3)];
-  }
-
-  function makeCanvas(imgData) {
-    const c = document.createElement('canvas');
-    c.width = imgData.width;
-    c.height = imgData.height;
-    c.getContext('2d').putImageData(imgData, 0, 0);
-    return c;
+    return keep;
   }
 
   /* 主入口。src 是工作尺寸的 ImageData。 */
@@ -181,46 +154,33 @@
     const t0 = performance.now();
     const opts = options || {};
     const w = src.width, h = src.height, n = w * h;
-    const marks = {};
-    const mark = function (name) { if (opts.debug) marks[name] = Math.round(performance.now() - t0); };
-
     const data = src.data;
-    const score = analyze(data, w, h, opts.enhance !== false);
-    mark('analyze');
 
+    const score = analyze(data, w, h, opts.enhance !== false);
     const t = thresholdFor(opts.sensitivity) * (opts.enhance !== false ? 0.92 : 1);
 
-    const strong = new Uint8Array(n);
-    let strongCount = 0;
+    const mask = new Uint8Array(n);
+    let count = 0;
     for (let p = 0; p < n; p++) {
-      if (score[p] > t) { strong[p] = 1; strongCount++; }
+      if (score[p] > t) { mask[p] = 1; count++; }
     }
     const minArea = Math.max(4, Math.round(n * 0.00001));
-    if (strongCount < Math.max(12, minArea)) {
-      return { ok: false, reason: 'empty', stats: { ms: performance.now() - t0 } };
-    }
+    if (count < Math.max(12, minArea)) return { ok: false };
 
     // 只保留主章附近的连通块，远处红色文字和 logo 丢掉
-    mark('threshold');
-    const lab = label(strong, w, h, minArea);
-    mark('label');
-    const cluster = clusterBox(lab.comps, w, h);
-    mark('cluster');
-    if (!cluster) {
-      return { ok: false, reason: 'empty', stats: { ms: performance.now() - t0 } };
-    }
-    const mask = new Uint8Array(n);
-    for (let p = 0; p < n; p++) {
-      if (strong[p] && cluster.keep[lab.labels[p]]) mask[p] = 1;
-    }
-    mark('mask');
+    const lab = label(mask, w, h, minArea);
+    const keep = clusterBox(lab.comps, w, h);
+    if (!keep) return { ok: false };
 
-    // 裁到章体边界
-    let minX = w, minY = h, maxX = -1, maxY = -1, count = 0;
+    // 剪掉其余块，同时取章体边界
+    let minX = w, minY = h, maxX = -1, maxY = -1;
+    count = 0;
     for (let y = 0; y < h; y++) {
       const row = y * w;
       for (let x = 0; x < w; x++) {
-        if (!mask[row + x]) continue;
+        const p = row + x;
+        if (!mask[p]) continue;
+        if (!keep[lab.labels[p]]) { mask[p] = 0; continue; }
         count++;
         if (x < minX) minX = x;
         if (x > maxX) maxX = x;
@@ -228,9 +188,7 @@
         if (y > maxY) maxY = y;
       }
     }
-    if (count < 12) {
-      return { ok: false, reason: 'empty', stats: { ms: performance.now() - t0 } };
-    }
+    if (count < 12) return { ok: false };
 
     // 贴边导出：按章体实际像素裁，只留 1px 给抗锯齿，不强制方形，也不留白
     const bw = maxX - minX + 1, bh = maxY - minY + 1;
@@ -240,76 +198,52 @@
     maxY = Math.min(h - 1, maxY + 1);
     const cw = maxX - minX + 1, ch = maxY - minY + 1;
 
-    const alpha = new Float32Array(cw * ch);
-    for (let y = 0; y < ch; y++) {
-      const srcRow = (y + minY) * w + minX;
-      const dstRow = y * cw;
-      for (let x = 0; x < cw; x++) alpha[dstRow + x] = mask[srcRow + x] ? 255 : 0;
-    }
-
-    let color;
-    if (opts.color === 'ink') {
-      color = inkColor(data, mask, score, t * 1.4);
-    } else {
-      const hex = (opts.color || 'ff0000').replace('#', '');
-      color = [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)];
-    }
+    const hex = (opts.color || 'ff0000').replace('#', '');
+    const color = [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)];
 
     const outData = new ImageData(cw, ch);
     const buf = outData.data;
     for (let y = 0; y < ch; y++) {
+      const srcRow = (y + minY) * w + minX;
       const dstRow = y * cw;
       for (let x = 0; x < cw; x++) {
-        const p = dstRow + x;
-        const i = p * 4;
+        if (!mask[srcRow + x]) continue;
+        const i = (dstRow + x) * 4;
         buf[i] = color[0];
         buf[i + 1] = color[1];
         buf[i + 2] = color[2];
-        buf[i + 3] = alpha[p];
+        buf[i + 3] = 255;
       }
     }
 
-    const canvas = makeCanvas(outData);
+    const canvas = document.createElement('canvas');
+    canvas.width = cw;
+    canvas.height = ch;
+    canvas.getContext('2d').putImageData(outData, 0, 0);
+
     const white = document.createElement('canvas');
-    white.width = cw; white.height = ch;
+    white.width = cw;
+    white.height = ch;
     const wctx = white.getContext('2d');
     wctx.fillStyle = '#ffffff';
     wctx.fillRect(0, 0, cw, ch);
     wctx.drawImage(canvas, 0, 0);
 
-    let debugMask = null;
-    if (opts.debug) {
-      const d = new ImageData(w, h);
-      for (let p = 0; p < n; p++) {
-        const v = mask[p] ? 255 : 0;
-        const i = p * 4;
-        d.data[i] = v; d.data[i + 1] = v; d.data[i + 2] = v; d.data[i + 3] = 255;
-      }
-      debugMask = makeCanvas(d);
-    }
-
     return {
       ok: true,
       canvas: canvas,
       whiteCanvas: white,
-      debugMask: debugMask,
-      color: color,
       stats: {
         ms: Math.round(performance.now() - t0),
         width: cw,
         height: ch,
-        coverage: count / (bw * bh),
-        threshold: t,
-        timings: opts.debug ? marks : undefined,
-        comps: opts.debug ? lab.comps.slice().sort(function (a, b) { return b.area - a.area; }).slice(0, 6) : undefined
+        coverage: count / (bw * bh)
       }
     };
   }
 
   global.SealExtract = {
-    MAX_SIDE: MAX_SIDE,
     workSize: workSize,
-    processImageData: processImageData,
-    thresholdFor: thresholdFor
+    processImageData: processImageData
   };
 })(window);
