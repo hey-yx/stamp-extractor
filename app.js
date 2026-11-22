@@ -4,6 +4,14 @@
 
   const $ = function (id) { return document.getElementById(id); };
 
+  function track(event, data) {
+    try {
+      if (window.umami && typeof window.umami.track === 'function') {
+        window.umami.track(event, data);
+      }
+    } catch (e) { /* 忽略统计脚本异常 */ }
+  }
+
   const els = {
     file: $('file'),
     pick: $('pick'),
@@ -208,6 +216,7 @@
       document.body.appendChild(a);
       a.click();
       a.remove();
+      track('extract_download', { kind: kind });
       setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
     }, 'image/png');
   }
